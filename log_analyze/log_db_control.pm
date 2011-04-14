@@ -22,7 +22,7 @@ sub insert_after_sql{
 EOF
     return $inser_after_sql;
 }
-
+ 
 sub check_table_sql{
     my $table_name = $_[0];
     my $check_table_sql = <<"EOF";

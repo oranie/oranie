@@ -81,7 +81,7 @@ DROP TABLE IF EXISTS `log_table_history`;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 CREATE TABLE `log_table_history` (
-  `table_name` varchar(20) NOT NULL,
+  `table_name` varchar(128) NOT NULL,
   `history_date` datetime NOT NULL,
   `channel_id` int(11) unsigned NOT NULL,
   PRIMARY KEY  (`table_name`),

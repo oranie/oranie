@@ -5,6 +5,7 @@ package Log_Text_Controls;
 use strict;
 use warnings;
 use HTTP::Date;
+use Math::Round;
 
 sub error_log{
     my @log = @_;
@@ -13,7 +14,7 @@ sub error_log{
     print OUT "$now_time  : @log\n";
     close(OUT);
 }
-
+ 
 
 #読み込んだ行を元にINSERT文のvalue部分を作成します。
 
@@ -23,7 +24,7 @@ sub create_insert_sql{
 
     my $c = ($log_line =~ s/,/,/g);
     if ($c != 5 ){
-        error_log("\n[Crit] log parse error!!!!! log_line : $log_line\n");
+        error_log("[Crit] log parse error!!!!! log_line : $log_line\n");
         return 1;
     }
  
@@ -41,6 +42,8 @@ sub create_insert_sql{
         $log_hash{response_size} = 0;
     }
 
+    #マイクロ秒からミリ秒への丸め処理    
+    $log_hash{response_time} = nearest(1000, $log_hash{response_time}) / 1000 ;
 
     #もしアクセスしたリソースが空だったら空文字で定義
     if (!defined $log_hash{resource}){
