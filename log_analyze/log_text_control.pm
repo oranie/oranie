@@ -8,8 +8,9 @@ use HTTP::Date;
 
 sub error_log{
     my @log = @_;
+    my $now_time = HTTP::Date::time2iso();
     open(OUT, ">>/tmp/sql_error.log");
-    print OUT "@log\n";
+    print OUT "$now_time  : @log\n";
     close(OUT);
 }
 

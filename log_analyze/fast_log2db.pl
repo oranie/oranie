@@ -23,16 +23,22 @@ my $channel_id = $get_channel_info[0];
 my $channel_name = $get_channel_info[1];
 
 #このスクリプトを実行
-error_log("start");
-open_gz_to_db($file, $channel_id,$channel_name);
-
-
-sub error_log{
-    my @log = @_;
-    open(OUT, ">>/tmp/sql_error.log");
-    print OUT "@log\n";
-    close(OUT);    
+eval{
+    Log_Text_Controls::error_log("start $file");
+    open_gz_to_db($file, $channel_id,$channel_name);
+    Log_Text_Controls::error_log("end $file");
+};
+if($@){
+    Log_Text_Controls::error_log($@);
 }
+
+#sub start_execute_check_db{
+#    my $table_name = @[0];
+#    my $c = Log_DB_Controls::check_table_sql($table_name);
+#    if ( $c ne 0){
+#        return 1;
+#    }
+#}
 
 #gzファイルをopenして、整形しSQLを発行、DBにINSERT。
 sub open_gz_to_db{
@@ -43,6 +49,10 @@ sub open_gz_to_db{
     my $sql_head = "INSERT INTO log_data(datetime,method,log_data,parametor,response_code,response_size,response_time,channel_id) value ";
     my $sql_last = "ALTER TABLE log_data RENAME TO log_data_$channel_name";
 
+    my $table_last_name =  Log_DB_Controls::rename_table_sql($file_name,$channel_name);
+    my $table_name = "log_data_$table_last_name";
+    my $now_time = HTTP::Date::time2iso();
+    my $table_value =  join( "','", $table_name,$now_time,$channel_id); 
 
     my @tmp = ();
     #とりあえず300件ずつcommitするためのカウンター
@@ -57,7 +67,7 @@ sub open_gz_to_db{
         chomp $line;
         my $sql = Log_Text_Controls::create_insert_sql($line,$channel_id);
         if ($sql eq "1"){
-            &error_log("\n[crit]log parse error open_gz_to_db \n");
+            Log_Text_Controls::error_log("\n[crit]log parse error open_gz_to_db \n");
             next;
         }
 
@@ -74,13 +84,7 @@ sub open_gz_to_db{
     my $tmp = join(',', @tmp);
 
     print "$sql_head $tmp ;\n";
-
-    my $table_last_name =  Log_DB_Controls::rename_table_sql($file_name,$channel_name);
-    my $table_name = "log_data_$table_last_name";
-    my $now_time = HTTP::Date::time2iso();
-
     print "ALTER TABLE log_data RENAME TO $table_name ;\n";
-    my $table_value =  join( "','", $table_name,$now_time,$channel_id); 
     print "INSERT INTO log_table_history value ('$table_value');\n";
     print Log_DB_Controls::insert_after_sql();
 
