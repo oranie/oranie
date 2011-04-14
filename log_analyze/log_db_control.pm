@@ -6,8 +6,49 @@ use strict;
 use warnings;
 use HTTP::Date;
 
+#print create_table_sql(shift);
+
+sub insert_pre_sql{
+    my $inser_pre_sql = <<"EOF";
+    SET GLOBAL innodb_flush_log_at_trx_commit = 2;
+    SET sql_mode = 'STRICT_ALL_TABLES';
+EOF
+    return $inser_pre_sql;
+}
+
+sub insert_after_sql{
+    my $inser_after_sql = <<"EOF";
+    SET GLOBAL innodb_flush_log_at_trx_commit = 1;
+EOF
+    return $inser_after_sql;
+}
+
 sub create_table_sql{
+    my $create_table_sql = <<"EOF";
+        DROP TABLE IF EXISTS `log_data`;
+        SET \@saved_cs_client     = \@\@character_set_client;
+        SET character_set_client = utf8;
+        CREATE TABLE `log_data` (
+           `log_id` int(11) unsigned NOT NULL auto_increment,
+           `datetime` datetime NOT NULL,
+           `method` varchar(20) NOT NULL,
+           `log_data` text NOT NULL,
+           `parametor` text,
+           `response_code` smallint(5) unsigned NOT NULL,
+           `response_size` int(11) unsigned NOT NULL,
+           `response_time` int NOT NULL,
+           `channel_id` int(11) unsigned NOT NULL,
+       PRIMARY KEY  (`log_id`),
+       UNIQUE KEY `log_id` (`log_id`),
+       KEY `channel_id` (`channel_id`)
+     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+EOF
+    return $create_table_sql;
+}
+
+sub rename_table_sql{
     my $file_name = shift or die "No File!! $!";
+    my $channel_name = shift or die "No Channel Name!! $!";
 
     open my $fh, "zcat $file_name 2>/dev/null |"
         or die "Can't zcat '$file_name' for reading: $!";
@@ -19,36 +60,17 @@ sub create_table_sql{
     my @date = split(/\-/, $date);
     $date = join('', $date[0],$date[1]);
 
-    my $create_table_name = "log_data_$date";
-
-    my $create_table_sql = <<"EOF";
-        DROP TABLE IF EXISTS `$create_table_name`;
-        SET \@saved_cs_client     = \@\@character_set_client;
-        SET character_set_client = utf8;
-        CREATE TABLE `$create_table_name` (
-           `log_id` int(11) unsigned NOT NULL auto_increment,
-           `datetime` datetime NOT NULL,
-           `method` varchar(20) NOT NULL,
-           `log_data` text NOT NULL,
-           `parametor` text,
-           `response_code` smallint(5) unsigned NOT NULL,
-           `response_size` int(11) unsigned NOT NULL,
-           `response_time` int(11) unsigned NOT NULL,
-           `channel_id` int(11) unsigned NOT NULL,
-       PRIMARY KEY  (`log_id`),
-       UNIQUE KEY `log_id` (`log_id`),
-       KEY `channel_id` (`channel_id`)
-     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
-EOF
-    return $create_table_sql;
+    my $rename_table_sql = "$channel_name$date";
+    return $rename_table_sql;
 }
 
-sub create_channel_id{
+sub get_channel_info_from_file{
     my $sql = "select channel_id,channel_name from MASTER_CHANNEL";
-    my $d = shift;
-    my $u = shift;
-    my $p = shift;
-    my $file = shift;
+    my $d = $_[0];
+    my $u = $_[1];
+    my $p = $_[2];
+    my $file = $_[3];
+
 
     my $chanel_id = 0;
     my $name = "";
@@ -73,7 +95,7 @@ sub create_channel_id{
             last;
         }
     }
-    return $chanel_id;
+    return ($chanel_id ,$name);
 }
 
 return 1;

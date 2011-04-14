@@ -73,31 +73,30 @@ LOCK TABLES `log_data` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `log_data_history`
+-- Table structure for table `log_table_history`
 --
 
-DROP TABLE IF EXISTS `log_data_history`;
+DROP TABLE IF EXISTS `log_table_history`;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
-CREATE TABLE `log_data_history` (
-  `history_id` int(11) unsigned NOT NULL,
+CREATE TABLE `log_table_history` (
+  `table_name` varchar(20) NOT NULL,
   `history_date` datetime NOT NULL,
   `channel_id` int(11) unsigned NOT NULL,
-  `table_name` text NOT NULL,
-  PRIMARY KEY  (`history_id`),
-  UNIQUE KEY `history_id` (`history_id`),
+  PRIMARY KEY  (`table_name`),
+  UNIQUE KEY `table_name` (`table_name`),
   KEY `channel_id` (`channel_id`),
   CONSTRAINT `channel_id` FOREIGN KEY (`channel_id`) REFERENCES `MASTER_CHANNEL` (`channel_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 SET character_set_client = @saved_cs_client;
 
 --
--- Dumping data for table `log_data_history`
+-- Dumping data for table `log_table_history`
 --
 
-LOCK TABLES `log_data_history` WRITE;
-/*!40000 ALTER TABLE `log_data_history` DISABLE KEYS */;
-/*!40000 ALTER TABLE `log_data_history` ENABLE KEYS */;
+LOCK TABLES `log_table_history` WRITE;
+/*!40000 ALTER TABLE `log_table_history` DISABLE KEYS */;
+/*!40000 ALTER TABLE `log_table_history` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -109,4 +108,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2011-04-12  7:59:42
+-- Dump completed on 2011-04-13 11:27:46
