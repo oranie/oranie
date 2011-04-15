@@ -37,7 +37,6 @@ SET character_set_client = @saved_cs_client;
 
 LOCK TABLES `MASTER_CHANNEL` WRITE;
 /*!40000 ALTER TABLE `MASTER_CHANNEL` DISABLE KEYS */;
-INSERT INTO `MASTER_CHANNEL` VALUES (1,'ht','HTMT'),(2,'dtcymo','DT_CYMO'),(3,'mbcymo','MOBILE_CYMO'),(4,'ipncymo','IPHONE_CYMO'),(5,'cymonext','CYMO_NEXT'),(6,'andcymo','ANDROID_CYMO');
 /*!40000 ALTER TABLE `MASTER_CHANNEL` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -57,6 +56,7 @@ CREATE TABLE `log_data` (
   `response_code` smallint(5) unsigned NOT NULL,
   `response_size` int(11) unsigned NOT NULL,
   `response_time` int(11) unsigned NOT NULL,
+  `host_name` varchar(40) NOT NULL,
   `channel_id` int(11) unsigned NOT NULL,
   PRIMARY KEY  (`log_id`),
   UNIQUE KEY `log_id` (`log_id`),

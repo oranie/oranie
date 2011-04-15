@@ -46,11 +46,13 @@ sub open_gz_to_db{
     my $channel_id = shift or die "No Channel ID!! $!";
     my $channel_name = shift or die "No Channel Name!! $!";
 
-    my $sql_head = "INSERT INTO log_data(datetime,method,log_data,parametor,response_code,response_size,response_time,channel_id) value ";
+    my $sql_head = "INSERT INTO log_data(datetime,method,log_data,parametor,response_code,response_size,response_time,host_name,channel_id) value ";
     my $sql_last = "ALTER TABLE log_data RENAME TO log_data_$channel_name";
 
     my $table_last_name =  Log_DB_Controls::rename_table_sql($file_name,$channel_name);
     my $table_name = "log_data_$table_last_name";
+    my $now_time = HTTP::Date::time2iso();
+    my $table_value =  join( "','", $table_name,$now_time,$channel_id); 
 
     my @tmp = ();
     #とりあえず300件ずつcommitするためのカウンター
@@ -83,10 +85,6 @@ sub open_gz_to_db{
 
     print "$sql_head $tmp ;\n";
     print "ALTER TABLE log_data RENAME TO $table_name ;\n";
-
-
-    my $now_time = HTTP::Date::time2iso();
-    my $table_value =  join( "','", $table_name,$now_time,$channel_id); 
     print "INSERT INTO log_table_history value ('$table_value');\n";
     print Log_DB_Controls::insert_after_sql();
 
