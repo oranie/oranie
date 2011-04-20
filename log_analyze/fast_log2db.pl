@@ -10,6 +10,7 @@ use DBI;
 #Log_DB_Controlsパッケージの読み込み
 require "./log_db_control.pm";
 require "./log_text_control.pm";
+require "./log_mail_control.pm";
 
 my $file = shift or die "No File!! $!";
 
@@ -22,23 +23,19 @@ my @get_channel_info = Log_DB_Controls::get_channel_info_from_file($d,$u,$p,$fil
 my $channel_id = $get_channel_info[0];
 my $channel_name = $get_channel_info[1];
 
+#Log_Mail_Controls::
+
 #このスクリプトを実行
 eval{
     Log_Text_Controls::error_log("start $file");
     open_gz_to_db($file, $channel_id,$channel_name);
     Log_Text_Controls::error_log("end $file");
+    Log_Mail_Controls::mail_send("end $file","on");
 };
 if($@){
     Log_Text_Controls::error_log($@);
+    Log_Mail_Controls::mail_send("$@","on");
 }
- 
-#sub start_execute_check_db{
-#    my $table_name = @[0];
-#    my $c = Log_DB_Controls::check_table_sql($table_name);
-#    if ( $c ne 0){
-#        return 1;
-#    }
-#}
 
 #gzファイルをopenして、整形しSQLを発行、DBにINSERT。
 sub open_gz_to_db{
@@ -46,7 +43,7 @@ sub open_gz_to_db{
     my $channel_id = shift or die "No Channel ID!! $!";
     my $channel_name = shift or die "No Channel Name!! $!";
 
-    my $sql_head = "INSERT INTO log_data(datetime,method,log_data,parametor,response_code,response_size,response_time,host_name,channel_id) value ";
+    my $sql_head = "INSERT INTO log_data(datetime,method,resource,parametor,response_code,response_size,response_time,host_name,channel_id) value ";
     my $sql_last = "ALTER TABLE log_data RENAME TO log_data_$channel_name";
 
     my $table_last_name =  Log_DB_Controls::rename_table_sql($file_name,$channel_name);

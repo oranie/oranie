@@ -10,16 +10,18 @@ use File::Find;
 require "./log_db_control.pm";
 require "./log_text_control.pm";
 
-my @channel = ("hogehoge","fugafuga");
+my @channel = ("hoge","fuga");
 
 eval{
     Log_Text_Controls::error_log("------------------------------START ALL LOG PARSE");
     my @tmp = &apache_log_parser("@channel");
     &parse_log_compress(@tmp);
     Log_Text_Controls::error_log("------------------------------FINISH ALL LOG PARSE");
+    Log_Mail_Controls::mail_send("end log_analyze","on");
 };
 if($@){
     Log_Text_Controls::error_log("[Crit] : $@");
+    Log_Mail_Controls::mail_send("$@","on");
 }
 
 sub month_get{
@@ -99,7 +101,7 @@ sub apache_log_parser{
                 if ($line !~ m/'HEAD|QuoteCheckServlet|WatchServlet|_Mod-Status|nagios|192.168.220'/){
                     my @line  = split('"',$line);
                     $line = join(" ",$line[0],$line[1],$line[2],$line[$#line]);
-                    $line =~ s/^- |192.168.210.2[0-9][0-9]|[0-9].* - - | HTTP\/[0-9].[0-9]|\[|\]|\+0900|\n//g ;
+                    $line =~ s/^- |192.168.210.2[0-9][0-9]|[0-9].* - - | - - | HTTP\/[0-9].[0-9]|\[|\]|\+0900|\n//g ;
                     $line =~ s/,//g;
                     $line =~ s/ +/,/g;
                     $line = join(",", $line,"$host\n");

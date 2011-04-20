@@ -35,10 +35,6 @@ SET character_set_client = @saved_cs_client;
 -- Dumping data for table `MASTER_CHANNEL`
 --
 
-LOCK TABLES `MASTER_CHANNEL` WRITE;
-/*!40000 ALTER TABLE `MASTER_CHANNEL` DISABLE KEYS */;
-/*!40000 ALTER TABLE `MASTER_CHANNEL` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `log_data`
@@ -51,12 +47,11 @@ CREATE TABLE `log_data` (
   `log_id` int(11) unsigned NOT NULL auto_increment,
   `datetime` datetime NOT NULL,
   `method` varchar(20) NOT NULL,
-  `log_data` text NOT NULL,
+  `resource` text NOT NULL,
   `parametor` text,
   `response_code` smallint(5) unsigned NOT NULL,
   `response_size` int(11) unsigned NOT NULL,
   `response_time` int(11) unsigned NOT NULL,
-  `host_name` varchar(40) NOT NULL,
   `channel_id` int(11) unsigned NOT NULL,
   PRIMARY KEY  (`log_id`),
   UNIQUE KEY `log_id` (`log_id`),
