@@ -5,22 +5,34 @@ package Log_DB_Controls;
 use strict;
 use warnings;
 use HTTP::Date;
+use Date::Simple;
 
 #print create_table_sql(shift);
 
 sub insert_pre_sql{
     my $inser_pre_sql = <<"EOF";
-    SET GLOBAL innodb_flush_log_at_trx_commit = 2;
+    SET GLOBAL innodb_flush_log_at_trx_commit = 0;
     SET sql_mode = 'STRICT_ALL_TABLES';
 EOF
     return $inser_pre_sql;
 }
 
 sub insert_after_sql{
-    my $inser_after_sql = <<"EOF";
+    my $table_name = $_[0];
+    my $channel_id = $_[1];
+    my $table_name_1sec = join('',"$table_name","_over1sec");
+    my $now_time = HTTP::Date::time2iso();
+    my $table_value =  join( "','", $table_name,$now_time,$channel_id);   
+    my $table1sec_value =  join( "','", $table_name_1sec,$now_time,$channel_id);   
+
+    my $insert_after_sql = <<"EOF";
+    ALTER TABLE log_data RENAME TO $table_name ;
     SET GLOBAL innodb_flush_log_at_trx_commit = 1;
+    CREATE TABLE `$table_name_1sec` AS SELECT * FROM `$table_name` WHERE `response_time` >= 1000 ;
+    INSERT INTO log_table_history value ('$table_value');
+    INSERT INTO log_table_history value ('$table1sec_value');
 EOF
-    return $inser_after_sql;
+    return $insert_after_sql;
 }
  
 sub check_table_sql{
@@ -36,31 +48,10 @@ sub create_table_sql{
         DROP TABLE IF EXISTS `log_data`;
         SET \@saved_cs_client     = \@\@character_set_client;
         SET character_set_client = utf8;
-        CREATE TABLE `log_data` ( `log_id` int(11) unsigned NOT NULL auto_increment,`datetime` datetime NOT NULL,`method` varchar(20) NOT NULL,`resource` text NOT NULL,`parametor` text,`response_code` smallint(5) unsigned NOT NULL,`response_size` int(11) unsigned NOT NULL,`response_time` int NOT NULL,`host_name` varchar(40) NOT NULL,`channel_id` int(11) unsigned NOT NULL, PRIMARY KEY  (`log_id`),UNIQUE KEY `log_id` (`log_id`),KEY `channel_id` (`channel_id`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+        CREATE TABLE `log_data` ( `log_id` int(11) unsigned NOT NULL auto_increment,`datetime` datetime NOT NULL,`method` varchar(20) NOT NULL,`log_data` varchar(512) NOT NULL,`parametor` text,`response_code` smallint(5) unsigned NOT NULL,`response_size` int(11) unsigned NOT NULL,`response_time` int NOT NULL,`host_name` varchar(40) NOT NULL,`channel_id` int(11) unsigned NOT NULL, PRIMARY KEY  (`log_id`),UNIQUE KEY `log_id` (`log_id`),KEY `channel_id` (`channel_id`),INDEX log_data_idx(log_data),INDEX response_time_idx(response_time)  ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
 EOF
     return $create_table_sql;
 }
-=pod
-上のSQL文
-        DROP TABLE IF EXISTS `log_data`;
-        SET \@saved_cs_client     = \@\@character_set_client;
-        SET character_set_client = utf8;
-        CREATE TABLE `log_data` (
-           `log_id` int(11) unsigned NOT NULL auto_increment,
-           `datetime` datetime NOT NULL,
-           `method` varchar(20) NOT NULL,
-           `resource` text NOT NULL,
-           `parametor` text,
-           `response_code` smallint(5) unsigned NOT NULL,
-           `response_size` int(11) unsigned NOT NULL,
-           `response_time` int NOT NULL,
-           `host_name` varchar(20) NOT NULL,
-           `channel_id` int(11) unsigned NOT NULL,
-       PRIMARY KEY  (`log_id`),
-       UNIQUE KEY `log_id` (`log_id`),
-       KEY `channel_id` (`channel_id`)
-     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
-=cut
 
 sub rename_table_sql{
     my $file_name = shift or die "No File!! $!";
@@ -74,11 +65,18 @@ sub rename_table_sql{
     ($log_hash{date}, $log_hash{method}, $log_hash{resource}, $log_hash{response_code}, 
         $log_hash{response_size}, $log_hash{response_time},$log_hash{host_name}) = split(/,/, $line) ;
 
+    #ログから何月分のログか判定するが、ローテートの関係でギリギリ前月分が入った時を考え1日+してその月を取得する。
     my $date = HTTP::Date::time2iso(str2time($log_hash{date}));
-    my @date = split(/\-/, $date);
+    $date =~ s/ .*//g;
+    my @date = split('-',$date);
+    $date = Date::Simple->new($date[0],$date[1],$date[2]);
+    $date = $date->next;
+
+    #1日+した日付からyyyymmを求める
+    @date = split(/\-/, $date);
     $date = join('', $date[0],$date[1]);
 
-    my $rename_table_sql = "$channel_name$date";
+    my $rename_table_sql = "log_data_$channel_name$date";
     return $rename_table_sql;
 }
 

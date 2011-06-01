@@ -10,7 +10,7 @@ use Math::Round;
 sub error_log{
     my @log = @_;
     my $now_time = HTTP::Date::time2iso();
-    open(OUT, ">>/tmp/fast_log2db.log");
+    open(OUT, ">>/tmp/log2db.log");
     print OUT "$now_time  : @log\n";
     close(OUT);
 }
@@ -19,8 +19,8 @@ sub error_log{
 #読み込んだ行を元にINSERT文のvalue部分を作成します。
 
 sub create_insert_sql{
-    my $log_line = shift;
-    my $channel_id = shift;
+    my $log_line = $_[0];
+    my $channel_id = $_[1];
 
     my $c = ($log_line =~ s/,/,/g);
     if ($c != 6 ){
@@ -79,13 +79,13 @@ sub create_insert_sql{
 
 
 sub get_log_date{
-    my $file_name = shift or die "No File!! $!";
+    my $file_name = $_[0] or die "No File!! $!";
 
     open my $fh, "zcat $file_name 2>/dev/null |"
         or die "Can't zcat '$file_name' for reading: $!";
 
     my $line = <$fh>;
-    my %log_hash = ();
+    my %log_hash ;
     ($log_hash{date}, $log_hash{method}, $log_hash{resource}, $log_hash{response_code},
         $log_hash{response_size}, $log_hash{response_time}, $log_hash{hostname}) = split(/,/, $line) ;
     my $date = HTTP::Date::time2iso(str2time($log_hash{date}));

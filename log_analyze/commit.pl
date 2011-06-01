@@ -8,7 +8,6 @@ use DBD::mysql;
 use DBI;
 
 #Log_DB_Controlsパッケージの読み込み
-#Log_DB_Controlsパッケージの読み込み
 require "./log_db_control.pm";
 require "./log_text_control.pm";
 require "./log_mail_control.pm";
