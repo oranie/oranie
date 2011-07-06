@@ -8,14 +8,14 @@ use File::Find;
 use Parallel::ForkManager;
 
 #Log_DB_Controlsパッケージの読み込み
-require "./log_db_control.pm";
-require "./log_text_control.pm";
-require "./log_parse.pm";
-require "./log_mail_control.pm";
+require "./lib/log_db_control.pm";
+require "./lib/log_text_control.pm";
+require "./lib/log_parse.pm";
+require "./lib/log_mail_control.pm";
 
 my $pm = Parallel::ForkManager->new(2);
 
-my @channel = ("hogehoge","fugafuga");
+my @channel = ("server1","server2");
 
 eval{
     Log_Text_Controls::error_log("------------------------------START ALL LOG PARSE");

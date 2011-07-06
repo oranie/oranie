@@ -6,8 +6,17 @@ use strict;
 use warnings;
 use HTTP::Date;
 use Date::Simple;
+use Config::Simple;
 
 #print create_table_sql(shift);
+
+my $cfgObj = new Config::Simple;
+$cfgObj->read('./lib/config.pm');
+my $cfg = $cfgObj->vars();
+my $d = $cfg->{'database.db'};
+my $u = $cfg->{'database.user'};
+my $p = $cfg->{'database.password'};
+
 
 sub insert_pre_sql{
     my $inser_pre_sql = <<"EOF";
@@ -29,8 +38,9 @@ sub insert_after_sql{
     ALTER TABLE log_data RENAME TO $table_name ;
     SET GLOBAL innodb_flush_log_at_trx_commit = 1;
     CREATE TABLE `$table_name_1sec` AS SELECT * FROM `$table_name` WHERE `response_time` >= 1000 ;
-    INSERT INTO log_table_history value ('$table_value');
-    INSERT INTO log_table_history value ('$table1sec_value');
+    INSERT INTO log_table_history(`table_name`,`history_date`,`channel_id`) value ('$table_value');
+    INSERT INTO log_table_history(`table_name`,`history_date`,`channel_id`) value ('$table1sec_value');
+    UPDATE log_table_history SET `over1sec` = 1 WHERE `table_name` LIKE '${table_name}%';
 EOF
     return $insert_after_sql;
 }
@@ -48,7 +58,7 @@ sub create_table_sql{
         DROP TABLE IF EXISTS `log_data`;
         SET \@saved_cs_client     = \@\@character_set_client;
         SET character_set_client = utf8;
-        CREATE TABLE `log_data` ( `log_id` int(11) unsigned NOT NULL auto_increment,`datetime` datetime NOT NULL,`method` varchar(20) NOT NULL,`log_data` varchar(512) NOT NULL,`parametor` text,`response_code` smallint(5) unsigned NOT NULL,`response_size` int(11) unsigned NOT NULL,`response_time` int NOT NULL,`host_name` varchar(40) NOT NULL,`channel_id` int(11) unsigned NOT NULL, PRIMARY KEY  (`log_id`),UNIQUE KEY `log_id` (`log_id`),KEY `channel_id` (`channel_id`),INDEX log_data_idx(log_data),INDEX response_time_idx(response_time)  ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+        CREATE TABLE `log_data` ( `log_id` INT(11) unsigned NOT NULL auto_increment,`datetime` datetime NOT NULL,`method` varchar(20) NOT NULL,`log_data` varchar(512) NOT NULL,`parametor` text,`response_code` smallint(5) unsigned NOT NULL,`response_size` int(11) unsigned NOT NULL,`response_time` int NOT NULL,`host_name` varchar(40) NOT NULL,`channel_id` int(11) unsigned NOT NULL, PRIMARY KEY  (`log_id`),UNIQUE KEY `log_id` (`log_id`),KEY `channel_id` (`channel_id`),INDEX log_data_idx(log_data),INDEX response_time_idx(response_time)  ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
 EOF
     return $create_table_sql;
 }
@@ -116,5 +126,28 @@ sub get_channel_info_from_file{
     }
     return ($chanel_id ,$name);
 }
+
+sub log_table_history_update{
+    my $this_func_name = ( caller 0 )[3];
+    Log_Text_Controls::error_log("$this_func_name start @_");
+
+    my $table_value = $_[0];
+    my $column_name = $_[1];
+    my ($table_name,$channel_id,$channel_name) = split(/:/, $table_value);
+
+    my $dbh = DBI->connect($d, $u, $p)
+        or die "DB Connect error $!";
+    my $sth;
+
+    my $update_sql = "UPDATE `log_table_history` SET `$column_name` = 1 WHERE `table_name` LIKE '${table_name}%'; ";
+    $sth = $dbh->prepare("$update_sql") or die "sql execute error $! : $update_sql";
+    $sth->execute  or die "sql execute error $!  : $update_sql ";
+    $sth->finish  or die "DB Connection Close error $!" ;
+
+
+    Log_Text_Controls::error_log("$this_func_name end $update_sql");
+    return 0;
+}
+
 
 return 1;

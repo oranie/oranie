@@ -8,15 +8,20 @@ use DBD::mysql;
 use DBI;
 
 #Log_DB_Controlsパッケージの読み込み
-require "./log_db_control.pm";
-require "./log_text_control.pm";
-require "./log_mail_control.pm";
+require "./lib/log_db_control.pm";
+require "./lib/log_text_control.pm";
+require "./lib/log_mail_control.pm";
 
 my $file = shift or die "No File!! $!";
 
-my $d = 'DBI:mysql:slow_log';
-my $u = 'root';
-my $p = 'hogehoge';
+use Config::Simple;
+
+my $cfgObj = new Config::Simple;
+$cfgObj->read('./lib/config.pm');
+my $cfg = $cfgObj->vars();
+my $d = $cfg->{'database.db'};
+my $u = $cfg->{'database.user'};
+my $p = $cfg->{'database.password'};
 
 #チャネルIDを取得します。
 my @get_channel_info = Log_DB_Controls::get_channel_info_from_file($d,$u,$p,$file);

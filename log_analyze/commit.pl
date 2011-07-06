@@ -6,21 +6,26 @@ use HTTP::Date;
 use IO::File;
 use DBD::mysql;
 use DBI;
+use Config::Simple;
 
 #Log_DB_Controlsパッケージの読み込み
-require "./log_db_control.pm";
-require "./log_text_control.pm";
-require "./log_mail_control.pm";
+require "./lib/log_db_control.pm";
+require "./lib/log_text_control.pm";
+require "./lib/log_mail_control.pm";
 
 my $file = shift or die "No File!! $!";
 
-my $d = 'DBI:mysql:slow_log';
-my $u = 'root';
-my $p = 'hogehoge';
+my $cfgObj = new Config::Simple;
+$cfgObj->read('./lib/config.pm');
+my $cfg = $cfgObj->vars();
+my $d = $cfg->{'database.db'};
+my $u = $cfg->{'database.user'};
+my $p = $cfg->{'database.password'};
+
 
 eval{
     Log_Text_Controls::error_log("DB execute start $file");
-    get_channel_info_from_file($d,$u,$p,$file);
+    get_channel_info_from_file($file);
     Log_Text_Controls::error_log("DB execute end $file");
     Log_Mail_Controls::mail_send("end $file","on");
 };
@@ -30,10 +35,7 @@ if($@){
 }
  
 sub get_channel_info_from_file{
-    my $d = $_[0];
-    my $u = $_[1];
-    my $p = $_[2];
-    my $file = $_[3];
+    my $file = $_[0];
 
     # データベースへ接続
     my $dbh = DBI->connect($d, $u, $p)

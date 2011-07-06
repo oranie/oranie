@@ -15,7 +15,7 @@ sub mail_send{
     my $body = $_[0];
     my $file = $_[1];
     if ($file =~ m/on/){
-        $file = '/tmp/log2db.log';
+        $file = '/tmp/fast_log2db.log';
         $file = io($file)->all;
     }
 
@@ -41,7 +41,7 @@ sub mail_send{
     my $mail = Email::MIME->create(
         header => [
             From    => 'root@example.com',
-            To      => 'test@example.co.jp',
+            To      => 'hogehoge@example.com',
             Subject => Encode::encode('MIME-Header-ISO_2022_JP', 'バッチ処理速報'),
         ],
         parts => [@parts],

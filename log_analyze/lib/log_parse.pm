@@ -9,11 +9,11 @@ use File::Find;
 package Log_Parser;
 
 #Log_DB_Controlsパッケージの読み込み
-require "./log_db_control.pm";
-require "./log_text_control.pm";
-require "./log_mail_control.pm";
+require "./lib/log_db_control.pm";
+require "./lib/log_text_control.pm";
+require "./lib/log_mail_control.pm";
 
-my @channel = ("hogehoge","fugafuga");
+my @channel = ("server1","server2");
 
 sub month_get{
     my $this_mon =  join(" ","date",'+"%Y-%m"');
@@ -94,7 +94,7 @@ sub web_log_parser{
     my $find_cmd;
 
         #nextとそれ以外を分けて処理
-    if ($server =~ "fugafuga"){
+    if ($server =~ "appserver"){
         $find_cmd = join("","find /data/server -name cfProcessTime_",$last_mon,"-\*.zip |grep -e ",$server,"|sort");
     }else{
         $find_cmd = join("","find /data/server -name access_log.",$last_mon,"-\*.zip |grep -e ",$server,"|sort");
@@ -120,7 +120,7 @@ sub web_log_parser{
         $log_file =~ s/\n//g;
         #nextとそれ以外を分けて処理
         my $host = $log_file;
-        if ($host !~ "fugafuga"){
+        if ($host !~ "appserver"){
             $host =~ s/\/data\/server\/$server\/|\/httpd.*//g;
         }else{
             $host =~ s/\/data\/server\/$server\/|\/ColdFusion.*//g;
@@ -131,7 +131,7 @@ sub web_log_parser{
             || die "Can't zcat '$log_file' for reading: $!";
         while ( my $line = <$fh> ) {
             #nextとそれ以外を分けて処理
-            if ($host =~ "fugafuga"){
+            if ($host =~ "appserver"){
                 $line = &coldfusion_parse($line,$host);
             }else{
                 $line = &apache_parse($line,$host);

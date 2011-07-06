@@ -10,7 +10,7 @@ use Math::Round;
 sub error_log{
     my @log = @_;
     my $now_time = HTTP::Date::time2iso();
-    open(OUT, ">>/tmp/log2db.log");
+    open(OUT, ">>/tmp/fast_log2db.log");
     print OUT "$now_time  : @log\n";
     close(OUT);
 }
@@ -35,17 +35,18 @@ sub create_insert_sql{
 
     #リクエストにパラメータがある場合分割する。
     $log_hash{parametor} = "";
-    if ( $log_hash{resource} =~ m/\?/){
-        ($log_hash{resource}, $log_hash{parametor}) = split(/\?/, $log_hash{resource});
+    if ( $log_hash{resource} =~ m/\?|%/){
+        ($log_hash{resource}, $log_hash{parametor}) = split(/\?|%/, $log_hash{resource});
     }
 
     if ( $log_hash{response_size} =~ m/-/){
         $log_hash{response_size} = 0;
     }
 
-    #マイクロ秒からミリ秒への丸め処理    
-    $log_hash{response_time} = nearest(1000, $log_hash{response_time}) / 1000 ;
-
+    #apacheのマイクロ秒からミリ秒への丸め処理 NEXTははじめからミリ秒なのでやらない。    
+    if ($channel_id != 5){
+        $log_hash{response_time} = nearest(1000, $log_hash{response_time}) / 1000 ;
+    }
     #もしアクセスしたリソースが空だったら空文字で定義
     if (!defined $log_hash{resource}){
         &error_log($log_line);
@@ -91,8 +92,8 @@ sub get_log_date{
     my $date = HTTP::Date::time2iso(str2time($log_hash{date}));
     my @date = split(/\-/, $date);
     $date = join('', $date[0],$date[1]);
-    return $date
 
+    return $date;
 }
 
 return 1;
