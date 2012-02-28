@@ -16,6 +16,17 @@ opt.on('-w VAL' " Check the time difference, or more if warnings threshold (sec)
 
 opt.parse!(ARGV)
 
+def line_check(line,host_tag)
+    if line =~ /#{host_tag}/
+        return 0
+    end
+end
+
+def log_line_parse(log_line)
+    line_record = log_line.split(/\t/)
+    return line_record
+end
+
 def tac_check(opts)
     log_file = opts["logfile"]
     host_tag = opts["host"]
@@ -51,17 +62,6 @@ def tac_check(opts)
         print  "Critical !!\nI read until the end...Not Found #{host_tag}\n"
         exit 2
     end
-end
-
-def line_check(line,host_tag)
-    if line =~ /#{host_tag}/
-        return 0
-    end
-end
-
-def log_line_parse(log_line)
-    line_record = log_line.split(/\t/)
-    return line_record
 end
 
 tac_check(opts)
