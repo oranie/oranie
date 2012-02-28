@@ -1,5 +1,7 @@
 #!/usr/local/rvm/rubies/ruby-1.9.3-p125/bin/ruby -Ku
-##!/usr/local/bin/ruby -Ku
+#
+#example: ./check_fluentd.rb  -f /var/log/td-agent/access_log.20120223 -h 127.0.0.1 -c 600 -w 180
+#
 require 'optparse'
 require 'json'
 require 'time'
@@ -27,7 +29,7 @@ def tac_check(opts)
             line_ary = log_line_parse(line) 
             log_time = Time.parse(line_ary[0])
             log_time = log_time.to_i
-            #該当タグが出てくるまでに、ログの時間が閾値を越えると各処理を実行
+            #該当パラメータが出てくるまでに、ログの時間が閾値を越えると各処理を実行
             if log_time <= critical_threshhold 
                 print  "Critical !!\nLAST LOG #{line}"
                 exit 2
@@ -45,7 +47,7 @@ def tac_check(opts)
                 next
             end
         end
-        #最後まで読んでも該当のタグが無い場合もcritical
+        #最後まで読んでも該当パラメータが無い場合もcritical
         print  "Critical !!\nI read until the end...Not Found #{host_tag}\n"
         exit 2
     end
