@@ -2,7 +2,7 @@
 #
 #example: ./check_fluentd.rb -p /var/log/td-agent/ -f access_log -h 127.0.0.1 -c 600 -w 180
 #
-#該当ログファイルを読んでいって、閾値を超えるまでに-hオプションで指定した文字列が出現するかどうかで監視します
+#該当ログファイルを読んでいって、閾値を超えるまでに-sオプションで指定した文字列が出現するかどうかで監視します
 
 require 'optparse'
 require 'time'
