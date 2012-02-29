@@ -1,4 +1,4 @@
-#!/usr/local/rvm/rubies/ruby-1.9.3-p125/bin/ruby -Ku
+#!/usr/local/rvm/rubies/ruby-1.9.3-p125/bin/ruby 
 #
 #example: ./check_fluentd.rb -p /var/log/td-agent/ -f access_log -h 127.0.0.1 -c 600 -w 180
 #
