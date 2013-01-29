@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 #このmonitorはjmxquery.jarを利用してmbeansをチェックします。その為、jmxquery.jarの仕様に則った形でコマンドを生成してチェックします。
+##http://www.op5.com/how-to/jboss-monitoring/
 ##Usage: check_jmx -U url -O object_name -A attribute [-K compound_key] [-I attribute_info] [-J attribute_info_key] [-u username] [-p password] -w warn_limit -c crit_limit [-v[vvv]] [-help]
 ##
 ##example:
