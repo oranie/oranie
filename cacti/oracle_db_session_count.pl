@@ -20,10 +20,7 @@ my $sql =  ("
     order by inst_id, machine
    " );
 
-my $sth = $dbh->prepare
- ("
- $sql 
- " );
+my $sth = $dbh->prepare("$sql");
 
 $sth -> execute();
 
