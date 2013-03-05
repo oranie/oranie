@@ -15,11 +15,11 @@ my $threshold = 0;
 my $ng_flag = 0;
 my @host_list; 
 my $timeout = 3;
-my $concurrent_process = 20;
+my $concurrent_process = 10;
 
 GetOptions(
     "t=i" => \$threshold,
-    "h=s{,}" => \@host_list
+    "h=s{1,}" => \@host_list
 );
 
 if ( scalar($threshold) == 0 ){
@@ -55,7 +55,8 @@ sub get_jmx_value{
     my $host = $_[0];
     my $jolokia_port = $_[1];
     my $threshold = $_[2];
-    my @host_status;
+    my $ng_flag = 0;
+    my @all_status;
  
     while (my ($attr, $mbean) = each(%mbean_attr_hash)){
         my $mbean_attr = "$mbean" . "=" . "$attr";
@@ -65,41 +66,46 @@ sub get_jmx_value{
         my $answer = $agent->get_attribute("$mbean_attr","$check_value");
         if  ( $? != 0 ){
             $ng_flag = 1;
+            alarm 0;
             next;
         }
         alarm 0;
         if ($answer > $threshold){
-            print "$host $attr pending threshold over!!$threshold->$answer \n";
-            my $host_status = "$attr $answer";
-            push(@host_status,$host_status);
+            my $status = "$host $attr pending threshold over!!$threshold->$answer";
+            push(@all_status,$status);
             $ng_flag = 1;
         }
     }
-    return @host_status;
+    return @all_status;
 }
 
 my $pm = Parallel::ForkManager->new($concurrent_process);
 $pm->run_on_finish(sub {
     my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data) = @_;
     my $host = $data->{'host'};
-    my $status = $data->{'status'};
+    my $all_status_ref = $data->{'all_status'};
 
-    if ( $status != 0 ){
-        print "$host is NG pending score is @ng_status_list\n";
-        push(@ng_host_list,$host);
-    }else{
-        print "$host is OK!!\n";
+    my @all_status_list = @$all_status_ref;
+
+    if ( scalar(@all_status_list) != 0 ){
+        foreach my $status (@all_status_list){
+            print $status . "\n";
+        }
+        $ng_flag = 1;
     }
-
 });
 
 foreach my $host(@host_list){
     $pm->start and next;
-    my $status = get_jmx_value($host,$jolokia_port,$threshold);
-    $pm->finish(0, { 'host' => $host, 'status' => $status});
+    my @all_status = get_jmx_value($host,$jolokia_port,$threshold);
+    foreach my $status(@all_status){
+        print $status . "\n";
+    }
+    $pm->finish(0, { 'host' => $host, 'all_status' => \@all_status});
 }
 $pm->wait_all_children;
 
-if ($ng_flag == 1){
-    exit 1;
+if ($ng_flag != 0){
+    print "Pending is NG\n";
+    #exit 1;
 }
