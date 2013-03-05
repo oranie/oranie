@@ -1,0 +1,45 @@
+#!/bin/perl
+
+use strict;
+use warnings;
+use Getopt::Long qw(:config posix_default no_ignore_case gnu_compat);
+use Parallel::ForkManager;
+use JMX::Jmx4Perl;
+use JMX::Jmx4Perl::Alias;
+#use JSON qw/encode_json decode_json/;
+use JSON ;
+use Data::Dumper;
+
+my $check_value = "PendingTasks";
+
+my %mbean_attr_hash = (
+    "ReadStage"=>"org.apache.cassandra.request:type",
+    "RequestResponseStage"=>"org.apache.cassandra.request:type",
+    "MutationStage"=>"org.apache.cassandra.request:type",
+    "ReadRepairStage"=>"org.apache.cassandra.request:type",
+    "ReplicateOnWriteStage"=>"org.apache.cassandra.request:type",
+    "GossipStage"=>"org.apache.cassandra.internal:type",
+    "AntiEntropyStage"=>"org.apache.cassandra.internal:type",
+    "MigrationStage"=>"org.apache.cassandra.internal:type",
+    "MemtablePostFlusher"=>"org.apache.cassandra.internal:type",
+    "StreamStage"=>"org.apache.cassandra.internal:type",
+    "FlushWriter"=>"org.apache.cassandra.internal:type",
+    "MiscStage"=>"org.apache.cassandra.internal:type",
+    "commitlog_archiver"=>"org.apache.cassandra.internal:type",
+    "AntiEntropySessions"=>"org.apache.cassandra.internal:type",
+    "InternalResponseStage"=>"org.apache.cassandra.internal:type",
+    "HintedHandoff"=>"org.apache.cassandra.internal:type"
+);
+
+while (my ($attr, $mbean) = each(%mbean_attr_hash)){
+    my $mbean_attr = "$mbean" . "=" . "$attr";
+    print $mbean_attr . "\n";
+    my $agent = new JMX::Jmx4Perl(mode=>"agent", url => "http://10.174.16.38:8778/jolokia");
+    my $answer = $agent->get_attribute("$mbean_attr","$check_value");
+    print "$mbean_attr is $answer \n";
+}
+
+
+#my $agent = new JMX::Jmx4Perl(mode=>"agent", url => "http://10.174.16.38:8778/jolokia");
+#my $answer = $agent->get_attribute("org.apache.cassandra.request:type=MutationStage","PendingTasks");
+
