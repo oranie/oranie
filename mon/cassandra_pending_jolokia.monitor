@@ -11,6 +11,9 @@ use JSON ;
 use Data::Dumper;
 
 my $check_value = "PendingTasks";
+my $host = "10.0.0.2";
+my $jolokia_port = "8778";
+
 
 my %mbean_attr_hash = (
     "ReadStage"=>"org.apache.cassandra.request:type",
@@ -34,12 +37,11 @@ my %mbean_attr_hash = (
 while (my ($attr, $mbean) = each(%mbean_attr_hash)){
     my $mbean_attr = "$mbean" . "=" . "$attr";
     print $mbean_attr . "\n";
-    my $agent = new JMX::Jmx4Perl(mode=>"agent", url => "http://10.174.16.38:8778/jolokia");
+    my $agent = new JMX::Jmx4Perl(mode=>"agent", url => "http://$host:$port/jolokia");
     my $answer = $agent->get_attribute("$mbean_attr","$check_value");
     print "$mbean_attr is $answer \n";
 }
 
-
-#my $agent = new JMX::Jmx4Perl(mode=>"agent", url => "http://10.174.16.38:8778/jolokia");
+#my $agent = new JMX::Jmx4Perl(mode=>"agent", url => "http://$host:$jolokia_port/jolokia");
 #my $answer = $agent->get_attribute("org.apache.cassandra.request:type=MutationStage","PendingTasks");
 
