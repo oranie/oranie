@@ -60,16 +60,21 @@ sub get_jmx_value{
  
     while (my ($attr, $mbean) = each(%mbean_attr_hash)){
         my $mbean_attr = "$mbean" . "=" . "$attr";
-        $SIG{ALRM} = sub { print "CHECK NODE IS timeout $host\n ";};
-        alarm($timeout);
-        my $agent = new JMX::Jmx4Perl(mode=>"agent", url => "http://$host:$jolokia_port/jolokia");
-        my $answer = $agent->get_attribute("$mbean_attr","$check_value");
-        if  ( $? != 0 ){
+        my $answer;
+        eval {
+            $SIG{ALRM} = sub { die "CHECK NODE IS timeout $host\n ";};
+            alarm($timeout);
+            my $agent = new JMX::Jmx4Perl(mode=>"agent", url => "http://$host:$jolokia_port/jolokia");
+            $answer = $agent->get_attribute("$mbean_attr","$check_value");
+            alarm 0;
+        };
+        if ($@) {
             $ng_flag = 1;
             alarm 0;
+            warn $@;
             next;
         }
-        alarm 0;
+
         if ($answer > $threshold){
             my $status = "$host $attr pending threshold over!!$threshold->$answer";
             push(@all_status,$status);
