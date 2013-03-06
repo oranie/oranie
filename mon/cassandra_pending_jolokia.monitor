@@ -15,7 +15,7 @@ my $threshold = 0;
 my $ng_flag = 0;
 my @host_list; 
 my $timeout = 3;
-my $concurrent_process = 10;
+my $concurrent_process = 30;
 
 GetOptions(
     "t=i" => \$threshold,
@@ -113,3 +113,5 @@ if ($ng_flag != 0){
     print "Pending is NG\n";
     exit 1;
 }
+print "ALL SERVER OK";
+exit 0;
