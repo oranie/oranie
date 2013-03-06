@@ -16,6 +16,7 @@ my $ng_flag = 0;
 my @host_list; 
 my $timeout = 3;
 my $concurrent_process = 30;
+my @ng_host_list;
 
 GetOptions(
     "t=i" => \$threshold,
@@ -72,7 +73,7 @@ sub get_jmx_value{
             $ng_flag = 1;
             alarm 0;
             warn $@;
-            next;
+            last;
         }
 
         if ($answer > $threshold){
@@ -94,10 +95,8 @@ $pm->run_on_finish(sub {
     my @all_status_list = @$all_status_ref;
 
     if ( scalar(@all_status_list) != 0 ){
-        #foreach my $status (@all_status_list){
-        #    print $status . "\n";
-        #}
         $ng_flag = 1;
+        push(@ng_host_list,$host);
     }
     return $host;
 });
@@ -105,12 +104,18 @@ $pm->run_on_finish(sub {
 foreach my $host(@host_list){
     $pm->start and next;
     my @all_status = get_jmx_value($host,$jolokia_port,$threshold);
+    #get_jmx_value($host,$jolokia_port,$threshold);
     $pm->finish(0, { 'host' => $host, 'all_status' => \@all_status});
+    #$pm->finish(0, { 'host' => $host});
 }
 $pm->wait_all_children;
 
+if (scalar(@ng_host_list) != 0 ){
+    $ng_flag = 1;
+}
+
 if ($ng_flag != 0){
-    print "Pending is NG\n";
+    print "Pending check is NG\n";
     exit 1;
 }
 print "ALL SERVER OK";
