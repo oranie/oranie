@@ -56,7 +56,6 @@ sub get_jmx_value{
     my $host = $_[0];
     my $jolokia_port = $_[1];
     my $threshold = $_[2];
-    my $ng_flag = 0;
     my @all_status;
  
     while (my ($attr, $mbean) = each(%mbean_attr_hash)){
@@ -70,9 +69,9 @@ sub get_jmx_value{
             alarm 0;
         };
         if ($@) {
-            $ng_flag = 1;
             alarm 0;
             warn $@;
+            push(@all_status,$@);
             last;
         }
 
@@ -80,7 +79,6 @@ sub get_jmx_value{
             my $status = "$host $attr pending threshold over!!$threshold->$answer";
             print "$status\n";
             push(@all_status,$status);
-            $ng_flag = 1;
         }
     }
     return @all_status;
@@ -104,9 +102,7 @@ $pm->run_on_finish(sub {
 foreach my $host(@host_list){
     $pm->start and next;
     my @all_status = get_jmx_value($host,$jolokia_port,$threshold);
-    #get_jmx_value($host,$jolokia_port,$threshold);
     $pm->finish(0, { 'host' => $host, 'all_status' => \@all_status});
-    #$pm->finish(0, { 'host' => $host});
 }
 $pm->wait_all_children;
 
