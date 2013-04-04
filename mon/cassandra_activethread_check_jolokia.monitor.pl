@@ -23,6 +23,7 @@ my @ng_host_list;
 
 GetOptions(
     "t=i" => \$threshold,
+    "p=s" => \$active_count_per_threshold,
     "h=s{1,}" => \@host_list
 );
 
@@ -32,27 +33,20 @@ if ( scalar($threshold) == 0 ){
     exit 1;
 }
 
+if ( scalar($active_count_per_threshold) == 0 ){
+    print "Option does not exist\n";
+    print "cassandra_pending_jolokia.monitor -t [threshold count(example:100)] -p [active count percentage(example:0.1)] -h [host list example;10.0.0.1 10.0.0.2]\n";
+    exit 1;
+}
+
 if ( scalar(@host_list) == 0 ){
     exit 0;
 }
 
 my %mbean_attr_hash = (
     "ReadStage"=>"org.apache.cassandra.request:type",
-#    "RequestResponseStage"=>"org.apache.cassandra.request:type",
     "MutationStage"=>"org.apache.cassandra.request:type",
-#    "ReadRepairStage"=>"org.apache.cassandra.request:type",
-    "ReplicateOnWriteStage"=>"org.apache.cassandra.request:type",
-#    "GossipStage"=>"org.apache.cassandra.internal:type",
-#    "AntiEntropyStage"=>"org.apache.cassandra.internal:type",
-#    "MigrationStage"=>"org.apache.cassandra.internal:type",
-#    "MemtablePostFlusher"=>"org.apache.cassandra.internal:type",
-#    "StreamStage"=>"org.apache.cassandra.internal:type",
-#    "FlushWriter"=>"org.apache.cassandra.internal:type",
-#    "MiscStage"=>"org.apache.cassandra.internal:type",
-#    "commitlog_archiver"=>"org.apache.cassandra.internal:type",
-#    "AntiEntropySessions"=>"org.apache.cassandra.internal:type",
-#    "InternalResponseStage"=>"org.apache.cassandra.internal:type",
-#    "HintedHandoff"=>"org.apache.cassandra.internal:type"
+    "ReplicateOnWriteStage"=>"org.apache.cassandra.request:type"
 );
 
 sub check_active_thread{
@@ -60,7 +54,6 @@ sub check_active_thread{
     my $max_thread = $_[1];
 
     my $result = $active_thread / $max_thread;
-    print "result is $result \n";
     return $result;
 }
 
@@ -83,8 +76,7 @@ sub get_jmx_value{
             $pending_task = $agent->get_attribute("$mbean_attr","$check_value");
             $active_thread = $agent->get_attribute("$mbean_attr","$check_active_thread");
             $max_thread = $agent->get_attribute("$mbean_attr","$check_max_thread");
-            print "$pending_task $active_thread $max_thread \n";
-
+            #print "$pending_task $active_thread $max_thread \n";
             alarm 0;
         };
         if ($@) {
@@ -95,9 +87,10 @@ sub get_jmx_value{
         }
         $active_thread_per = check_active_thread($active_thread,$max_thread);
 
-        if ($pending_task > $threshold && $active_thread_per > $active_count_per_threshold){
+        if ($pending_task > $threshold or $active_thread_per > $active_count_per_threshold){
             my $status = "$host $attr pending threshold over!!PendingTask is $threshold->$pending_task and Thread status is $active_thread>$max_thread";
             print "$status\n";
+            print "act_thread_per is $active_thread_per > threshold is $active_count_per_threshold\n";
             push(@all_status,$status);
         }
     }
