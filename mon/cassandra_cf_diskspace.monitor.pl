@@ -89,7 +89,9 @@ sub get_cf_diskspace{
             #org.apache.cassandra.db:type=ColumnFamilies,keyspace=amebame_test,columnfamily=subscription
             
             my $result = $agent->get_attribute("$mbean","$attr");
-            my @status= ("$host","$ks_name","$cf_name","$attr","$result";
+            my @status= ("$host","$ks_name","$cf_name","$attr","$result");
+            my $gf = GrowthForecast->new( host => '10.174.0.68', port => 5125 );
+            $gf->post( 'cassandra', "$host", "${ks_name}_${cf_name}_${attr}", $result );
             push(@all_status,\@status);
             alarm 0;
         };
