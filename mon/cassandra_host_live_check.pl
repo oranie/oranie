@@ -27,8 +27,9 @@ eval{
     my %hash = %$hash_r;
     print %hash;
 };if($@){
+    print "$host status NG!!!!!!";
     print "$@\n";
     exit 2;
 }
-
+print "$host status OK!!"
 exit 0;
