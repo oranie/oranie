@@ -90,8 +90,9 @@ sub get_cf_diskspace{
             
             my $result = $agent->get_attribute("$mbean","$attr");
             my @status= ("$host","$ks_name","$cf_name","$attr","$result");
-            my $gf = GrowthForecast->new( host => '10.174.0.68', port => 5125 );
-            $gf->post( 'cassandra', "$host", "${ks_name}_${cf_name}_${attr}", $result );
+            my $graph_name = "$ks_name"."_"."$cf_name"."_"."$attr";
+            my $gf = Net::GrowthForecast->new( host => '10.174.0.68', port => 5125 );
+            $gf->post( 'cassandra', "$host", "$graph_name", $result );
             push(@all_status,\@status);
             alarm 0;
         };
