@@ -10,7 +10,6 @@ use JMX::Jmx4Perl;
 use JMX::Jmx4Perl::Alias;
 use JSON ;
 use Data::Dumper;
-use LWP::Simple;
 use Net::GrowthForecast;
 
 my @host_list;
@@ -24,8 +23,14 @@ my %mbean_attr_hash =(
 #    "TotalDiskSpaceUsed" => "org.apache.cassandra.db:type=ColumnFamilies,"
 );
 
+my $gf_host = "10.174.0.68";
+my $gf_port = "5125";
+my $gf_execute = "off";
+
+
 GetOptions(
-    "h=s{,}" => \@host_list
+    "h=s{,}" => \@host_list,
+    "g=s" => \$gf_execute
 );
 
 sub ks_and_cflist_get{
@@ -69,6 +74,17 @@ sub make_ks_and_cf_kv{
     return %all_list_hash;
 }
 
+sub gf_post_data{
+    my $host = $_[0];
+    my $graph_name = $_[1];
+    my $result = $_[2];
+
+    my $gf = Net::GrowthForecast->new( host => $gf_host , port => $gf_port );
+    $gf->post( 'cassandra', "$host", "$graph_name", $result );
+
+    return 0;
+}
+
 sub get_cf_diskspace{
     my $host = $_[0];
     my $cf_name = $_[1];
@@ -90,9 +106,10 @@ sub get_cf_diskspace{
             
             my $result = $agent->get_attribute("$mbean","$attr");
             my @status= ("$host","$ks_name","$cf_name","$attr","$result");
-            my $graph_name = "$ks_name"."_"."$cf_name"."_"."$attr";
-            my $gf = Net::GrowthForecast->new( host => '10.174.0.68', port => 5125 );
-            $gf->post( 'cassandra', "$host", "$graph_name", $result );
+            if ($gf_exevute eq "on"){
+                my $graph_name = "$ks_name"."_"."$cf_name"."_"."$attr";
+                gf_post_data($host, $graph_name, $result);
+            }
             push(@all_status,\@status);
             alarm 0;
         };
@@ -114,7 +131,7 @@ my %all_list_hash = make_ks_and_cf_kv(@ks_and_cf_list);
 foreach my $cf_name ( keys( %all_list_hash ) ) {
     my $ks_name = $all_list_hash{$cf_name};
     if ($ks_name =~ "amebame"){
-        my $host_status = get_cf_diskspace($host,$cf_name,$ks_name);
+        my @host_status = get_cf_diskspace($host,$cf_name,$ks_name);
     }
 } 
 
