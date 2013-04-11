@@ -13,10 +13,8 @@ use Data::Dumper;
 use Net::GrowthForecast;
 
 my @host_list;
-my $host_count = @host_list;
-my @ng_host_list;
+my $master_host;
 my $timeout = 10;
-my $concurrent_process = 5;
 my $jolokia_port = 8778;
 my %mbean_attr_hash =(
     "LiveDiskSpaceUsed" => "org.apache.cassandra.db:type=ColumnFamilies,",
@@ -27,18 +25,40 @@ my $gf_host = "10.174.0.68";
 my $gf_port = "5125";
 my $gf_execute = "off";
 
+my $concurrent_process = 30;
+my $pm = Parallel::ForkManager->new($concurrent_process);
+
 
 GetOptions(
-    "h=s{,}" => \@host_list,
-    "g=s" => \$gf_execute
+    "g=s" => \$gf_execute,
+    "m=s" => \$master_host
 );
+
+sub get_cassandra_host_list{
+    my $master_host = $_[0];
+
+    $SIG{ALRM} = sub { print "CHECK MASTER NODE IS timeout $master_host\n ";my @cassandra_server_status_list = "time out error";exit 1; };
+    alarm($timeout);
+    my $cmd = "/usr/local/cassandra/bin/nodetool -h $master_host ring |grep '10.17'| awk '{print \$1}'";
+    my @host_list = qx{$cmd};
+    if  ( $? != 0 ){
+        alarm 0;
+        $host_list[0] = "NG";
+        return 1;
+    }
+    alarm 0;
+
+    return @host_list;
+}
 
 sub ks_and_cflist_get{
     my $host = $_[0];
+    chomp($host);
 
     $SIG{ALRM} = sub { print "CHECK MASTER NODE IS timeout $host\n ";my @cassandra_server_status_list = "time out error";exit 1; };
     alarm($timeout);
-    my @ks_and_cflist = qx{/usr/local/cassandra/bin/nodetool -h $host cfstats | egrep "Column Family|Keyspace"|sed -e 's/\t\t//g'};
+    my $cmd = "/usr/local/cassandra/bin/nodetool -h ${host} cfstats | egrep 'Column Family|Keyspace' | sed -e 's/\t\t//g'";
+    my @ks_and_cflist = qx{$cmd};
     if  ( $? != 0 ){
         alarm 0;
         $ks_and_cflist[0] = "NG";
@@ -79,9 +99,13 @@ sub gf_post_data{
     my $graph_name = $_[1];
     my $result = $_[2];
 
-    my $gf = Net::GrowthForecast->new( host => $gf_host , port => $gf_port );
-    $gf->post( 'cassandra', "$host", "$graph_name", $result );
-
+    eval{
+        my $gf = Net::GrowthForecast->new( host => $gf_host , port => $gf_port );
+        $gf->post( 'cassandra', "$host", "$graph_name", $result );
+    };if($@){
+        print "$@\n";
+        return 1;
+    }
     return 0;
 }
 
@@ -102,14 +126,16 @@ sub get_cf_diskspace{
             $SIG{ALRM} = sub { die "CHECK NODE IS timeout $host\n ";};
             alarm($timeout);
             my $agent = new JMX::Jmx4Perl(mode=>"agent", url => "http://$host:$jolokia_port/jolokia");
-            #org.apache.cassandra.db:type=ColumnFamilies,keyspace=amebame_test,columnfamily=subscription
             
             my $result = $agent->get_attribute("$mbean","$attr");
             my @status= ("$host","$ks_name","$cf_name","$attr","$result");
-            if ($gf_exevute eq "on"){
-                my $graph_name = "$ks_name"."_"."$cf_name"."_"."$attr";
+            my $graph_name = "$ks_name"."_"."$cf_name"."_"."$attr";
+            if ($gf_execute eq "on"){
                 gf_post_data($host, $graph_name, $result);
+            }else{
+                print "if execute post data is ($host, $graph_name, $result)\n";
             }
+            
             push(@all_status,\@status);
             alarm 0;
         };
@@ -124,18 +150,37 @@ sub get_cf_diskspace{
     return @all_status;
 }
 
+sub ks_cflist_to_graph{
+    my $host = $_[0];
+    my $all_list_hash_ref = $_[1];
+    my %all_list_hash = %$all_list_hash_ref ;
 
-my $host = $host_list[0];
-my @ks_and_cf_list = ks_and_cflist_get($host);
-my %all_list_hash = make_ks_and_cf_kv(@ks_and_cf_list);
-foreach my $cf_name ( keys( %all_list_hash ) ) {
-    my $ks_name = $all_list_hash{$cf_name};
-    if ($ks_name =~ "amebame"){
-        my @host_status = get_cf_diskspace($host,$cf_name,$ks_name);
+    eval{
+        foreach my $cf_name ( keys( %all_list_hash ) ) {
+            my $ks_name = $all_list_hash{$cf_name};
+            if ($ks_name =~ "amebame"){
+                my @host_status = get_cf_diskspace($host,$cf_name,$ks_name);
+            }
+        }
+    };if($@){
+        print "$@";
+        return 1;
     }
-} 
+    return 0 ;
+}
 
-
-
-
+eval{
+    @host_list = get_cassandra_host_list($master_host);
+    my @ks_and_cf_list = ks_and_cflist_get($host_list[0]);
+    foreach my $host(@host_list){
+        $pm->start and next;
+        chomp($host);
+        my %all_list_hash = make_ks_and_cf_kv(@ks_and_cf_list);
+        ks_cflist_to_graph($host,\%all_list_hash);
+        $pm->finish;
+    }
+    $pm->wait_all_children;
+};if($@){
+    print "$@\n";
+}
 
