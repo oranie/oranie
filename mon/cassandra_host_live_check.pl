@@ -31,5 +31,5 @@ eval{
     print "$@\n";
     exit 2;
 }
-print "$host status OK!!"
+print "$host status OK!!";
 exit 0;
