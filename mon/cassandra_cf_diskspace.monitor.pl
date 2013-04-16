@@ -20,8 +20,9 @@ my %mbean_attr_hash =(
     "LiveDiskSpaceUsed" => "org.apache.cassandra.db:type=ColumnFamilies,",
 #    "TotalDiskSpaceUsed" => "org.apache.cassandra.db:type=ColumnFamilies,"
 );
+my $regexp_word = "hogehoge";
 
-my $gf_host = "10.174.0.68";
+my $gf_host = "127.0.0.1";
 my $gf_port = "5125";
 my $gf_execute = "off";
 
@@ -158,8 +159,9 @@ sub ks_cflist_to_graph{
     eval{
         foreach my $cf_name ( keys( %all_list_hash ) ) {
             my $ks_name = $all_list_hash{$cf_name};
-            if ($ks_name =~ "amebame"){
+            if ($ks_name =~ "$regexp_word"){
                 my @host_status = get_cf_diskspace($host,$cf_name,$ks_name);
+                sleep 1;
             }
         }
     };if($@){
