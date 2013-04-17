@@ -11,6 +11,9 @@ use JMX::Jmx4Perl::Alias;
 use JSON ;
 use Data::Dumper;
 use Net::GrowthForecast;
+use Log::Minimal;
+
+local $Log::Minimal::LOG_LEVEL = "INFO";
 
 my @host_list;
 my $master_host;
@@ -172,6 +175,7 @@ sub ks_cflist_to_graph{
 }
 
 eval{
+    infof("ALL EXECUTE START!!!")
     @host_list = get_cassandra_host_list($master_host);
     my @ks_and_cf_list = ks_and_cflist_get($host_list[0]);
     foreach my $host(@host_list){
@@ -183,6 +187,6 @@ eval{
     }
     $pm->wait_all_children;
 };if($@){
-    print "$@\n";
+    warnf("$@");
 }
-
+infof("ALL EXECUTE OK!!!")
