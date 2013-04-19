@@ -1,15 +1,11 @@
 #!/usr/bin/perl
-# ノードからcfstats情報を取得して、生成したkeyspace(ks)とcolumn family(cf)のリストを生成し、
-# その情報を元にjolokiaを叩いて各cfのDisk使用量を取得します
-#######################################################################################################
+
 use strict;
 use warnings;
 use Getopt::Long qw(:config posix_default no_ignore_case gnu_compat);
 use Parallel::ForkManager;
 use JMX::Jmx4Perl;
 use JMX::Jmx4Perl::Alias;
-use JSON ;
-use Data::Dumper;
 use Net::GrowthForecast;
 use Log::Minimal;
 
@@ -20,10 +16,11 @@ my $master_host;
 my $timeout = 10;
 my $jolokia_port = 8778;
 my %mbean_attr_hash =(
-    "LiveDiskSpaceUsed" => "org.apache.cassandra.db:type=ColumnFamilies,",
-#    "TotalDiskSpaceUsed" => "org.apache.cassandra.db:type=ColumnFamilies,"
+    "LiveDiskSpaceUsed" => "org.apache.cassandra.db:type=ColumnFamilies,"
 );
 my $regexp_word = "hogehoge";
+
+my $node_ip_range = "192.168";
 
 my $gf_host = "127.0.0.1";
 my $gf_port = "5125";
@@ -43,7 +40,7 @@ sub get_cassandra_host_list{
 
     $SIG{ALRM} = sub { print "CHECK MASTER NODE IS timeout $master_host\n ";my @cassandra_server_status_list = "time out error";exit 1; };
     alarm($timeout);
-    my $cmd = "/usr/local/cassandra/bin/nodetool -h $master_host ring |grep '10.17'| awk '{print \$1}'";
+    my $cmd = "/usr/local/cassandra/bin/nodetool -h $master_host ring |grep "$node_ip_range"| awk '{print \$1}'";
     my @host_list = qx{$cmd};
     if  ( $? != 0 ){
         alarm 0;
@@ -124,7 +121,6 @@ sub get_cf_diskspace{
     while (my ($attr, $mbean_base) = each(%mbean_attr_hash)){
         my $mbean = "${mbean_base}keyspace=$ks_name,columnfamily=$cf_name";
         my $url = "http://$host:$jolokia_port/jolokia/read/$mbean/$attr";
-        #print "url is $url\n";
         my $live_space;
         eval {
             $SIG{ALRM} = sub { die "CHECK NODE IS timeout $host\n ";};
@@ -137,7 +133,7 @@ sub get_cf_diskspace{
             if ($gf_execute eq "on"){
                 gf_post_data($host, $graph_name, $result);
             }else{
-                print "if execute post data is ($host, $graph_name, $result)\n";
+                infof("if execute post data is ($host, $graph_name, $result)");
             }
             
             push(@all_status,\@status);
@@ -145,11 +141,10 @@ sub get_cf_diskspace{
         };
         if ($@) {
             alarm 0;
-            warn $@;
+            warnf("$@");
             push(@all_status,$@);
             last;
         }
-        #exit;
     }
     return @all_status;
 }
@@ -168,7 +163,7 @@ sub ks_cflist_to_graph{
             }
         }
     };if($@){
-        print "$@";
+        warnf("$@");
         return 1;
     }
     return 0 ;
@@ -189,4 +184,5 @@ eval{
 };if($@){
     warnf("$@");
 }
-infof("ALL EXECUTE OK!!!")
+infof("ALL EXECUTE OK!!!");
+
