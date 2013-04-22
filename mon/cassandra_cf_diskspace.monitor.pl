@@ -43,9 +43,11 @@ sub help_message{
 
 GetOptions(
     "g=s" => \$gf_execute,
-    "m=s{1}" => \$master_host,
+    "h=s{1}" => \$master_host,
     "r=s" => \$regexp_word,
     "i=s{1}" => \$node_ip_range
+    "m=s" => \$mbean,
+    "a=s" => \$attr
 ) or die(help_message);
 
 if ( scalar($master_host) == 0 ){
