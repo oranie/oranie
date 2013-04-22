@@ -15,11 +15,11 @@ my @host_list;
 my $master_host;
 my $timeout = 10;
 my $jolokia_port = 8778;
-my %mbean_attr_hash =(
+my %mbean_attr_hash = (
     "LiveDiskSpaceUsed" => "org.apache.cassandra.db:type=ColumnFamilies,"
 );
-my $regexp_word = "hogehoge";
 
+my $regexp_word = ".*";
 my $node_ip_range = "192.168";
 
 my $gf_host = "127.0.0.1";
@@ -32,7 +32,9 @@ my $pm = Parallel::ForkManager->new($concurrent_process);
 
 GetOptions(
     "g=s" => \$gf_execute,
-    "m=s" => \$master_host
+    "m=s" => \$master_host,
+    "r=s" => \$regexp_word,
+    "i=s" => \$node_ip_range
 );
 
 sub get_cassandra_host_list{
@@ -40,7 +42,8 @@ sub get_cassandra_host_list{
 
     $SIG{ALRM} = sub { print "CHECK MASTER NODE IS timeout $master_host\n ";my @cassandra_server_status_list = "time out error";exit 1; };
     alarm($timeout);
-    my $cmd = "/usr/local/cassandra/bin/nodetool -h $master_host ring |grep "$node_ip_range"| awk '{print \$1}'";
+    my $cmd = "/usr/local/cassandra/bin/nodetool -h $master_host ring | grep '$node_ip_range' | awk '{print \$1}'";
+    infof($cmd);
     my @host_list = qx{$cmd};
     if  ( $? != 0 ){
         alarm 0;
@@ -53,12 +56,13 @@ sub get_cassandra_host_list{
 }
 
 sub ks_and_cflist_get{
-    my $host = $_[0];
-    chomp($host);
+    my $master_host = $_[0];
+    chomp($master_host);
 
-    $SIG{ALRM} = sub { print "CHECK MASTER NODE IS timeout $host\n ";my @cassandra_server_status_list = "time out error";exit 1; };
+    $SIG{ALRM} = sub { print "CHECK MASTER NODE IS timeout $master_host\n ";my @cassandra_server_status_list = "time out error";exit 1; };
     alarm($timeout);
-    my $cmd = "/usr/local/cassandra/bin/nodetool -h ${host} cfstats | egrep 'Column Family|Keyspace' | sed -e 's/\t\t//g'";
+    my $cmd = "/usr/local/cassandra/bin/nodetool -h $master_host cfstats | egrep 'Column Family|Keyspace' | sed -e 's/\t\t//g'";
+    infof($cmd);
     my @ks_and_cflist = qx{$cmd};
     if  ( $? != 0 ){
         alarm 0;
@@ -104,7 +108,7 @@ sub gf_post_data{
         my $gf = Net::GrowthForecast->new( host => $gf_host , port => $gf_port );
         $gf->post( 'cassandra', "$host", "$graph_name", $result );
     };if($@){
-        print "$@\n";
+        critf("$@\n");
         return 1;
     }
     return 0;
@@ -130,10 +134,12 @@ sub get_cf_diskspace{
             my $result = $agent->get_attribute("$mbean","$attr");
             my @status= ("$host","$ks_name","$cf_name","$attr","$result");
             my $graph_name = "$ks_name"."_"."$cf_name"."_"."$attr";
+
             if ($gf_execute eq "on"){
+                infof(" execute post data ($host, $graph_name, $result)");
                 gf_post_data($host, $graph_name, $result);
             }else{
-                infof("if execute post data is ($host, $graph_name, $result)");
+                infof("if (-g on) will post data ($host, $graph_name, $result)");
             }
             
             push(@all_status,\@status);
@@ -141,7 +147,7 @@ sub get_cf_diskspace{
         };
         if ($@) {
             alarm 0;
-            warnf("$@");
+            critf("$@");
             push(@all_status,$@);
             last;
         }
@@ -157,21 +163,24 @@ sub ks_cflist_to_graph{
     eval{
         foreach my $cf_name ( keys( %all_list_hash ) ) {
             my $ks_name = $all_list_hash{$cf_name};
+            infof("$ks_name =~ $regexp_word");
             if ($ks_name =~ "$regexp_word"){
                 my @host_status = get_cf_diskspace($host,$cf_name,$ks_name);
                 sleep 1;
             }
         }
     };if($@){
-        warnf("$@");
+        critf("$@");
         return 1;
     }
+
     return 0 ;
 }
 
 eval{
-    infof("ALL EXECUTE START!!!")
+    infof("ALL EXECUTE START!!! master host is $master_host");
     @host_list = get_cassandra_host_list($master_host);
+    infof("host list is @host_list");
     my @ks_and_cf_list = ks_and_cflist_get($host_list[0]);
     foreach my $host(@host_list){
         $pm->start and next;
@@ -182,7 +191,7 @@ eval{
     }
     $pm->wait_all_children;
 };if($@){
-    warnf("$@");
+    critf("$@");
 }
 infof("ALL EXECUTE OK!!!");
 
