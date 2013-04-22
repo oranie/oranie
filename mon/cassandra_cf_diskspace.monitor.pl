@@ -15,9 +15,8 @@ my @host_list;
 my $master_host;
 my $timeout = 10;
 my $jolokia_port = 8778;
-my %mbean_attr_hash = (
-    "LiveDiskSpaceUsed" => "org.apache.cassandra.db:type=ColumnFamilies,"
-);
+my $mbean = "org.apache.cassandra.db:type=ColumnFamilies,";
+my $attr = "LiveDiskSpaceUsed";
 
 my $regexp_word = ".*";
 my $node_ip_range;
@@ -32,11 +31,13 @@ my $pm = Parallel::ForkManager->new($concurrent_process);
 
 sub help_message{
     critf("Option does not exist");
-    critf("perl cassandra_cf_diskspace.monitor.pl -m 192.168.0.2 -i 192.168 -g on -r hogehoge ");
-    critf("-m [must:master host, example:192.168.0.2]") ;
+    critf("perl cassandra_cf_diskspace.monitor.pl -h 192.168.0.2 -i 192.168 -g on -r hogehoge ");
+    critf("-h [must:master host, example:192.168.0.2]") ;
     critf("-i [must:grep get node ip by nodetool ring status. example:192.168]");
     critf("-g [execute on/off defalut:off]");
     critf("-r [keyspace match word defalut:all match]");
+    critf("-m [get mbean name. delalut: org.apache.cassandra.db:type=ColumnFamilies,");
+    critf("-a [get attribute name. delalut: LiveDiskSpaceUsed");
     exit 1;
 }
 
@@ -56,6 +57,10 @@ if ( scalar($node_ip_range) == 0 ){
     help_message;
     exit 1;
 }
+
+my %mbean_attr_hash = (
+    $attr => "$mbean"
+);
 
 sub get_cassandra_host_list{
     my $master_host = $_[0];
