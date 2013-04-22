@@ -20,7 +20,7 @@ my %mbean_attr_hash = (
 );
 
 my $regexp_word = ".*";
-my $node_ip_range = "192.168";
+my $node_ip_range;
 
 my $gf_host = "127.0.0.1";
 my $gf_port = "5125";
@@ -30,19 +30,39 @@ my $concurrent_process = 30;
 my $pm = Parallel::ForkManager->new($concurrent_process);
 
 
+sub help_message{
+    critf("Option does not exist");
+    critf("perl cassandra_cf_diskspace.monitor.pl -m 192.168.0.2 -i 192.168 -g on -r hogehoge ");
+    critf("-m [must:master host, example:192.168.0.2]") ;
+    critf("-i [must:grep get node ip by nodetool ring status. example:192.168]");
+    critf("-g [execute on/off defalut:off]");
+    critf("-r [keyspace match word defalut:all match]");
+    exit 1;
+}
+
 GetOptions(
     "g=s" => \$gf_execute,
-    "m=s" => \$master_host,
+    "m=s{1}" => \$master_host,
     "r=s" => \$regexp_word,
-    "i=s" => \$node_ip_range
-);
+    "i=s{1}" => \$node_ip_range
+) or die(help_message);
+
+if ( scalar($master_host) == 0 ){
+    help_message;
+    exit 1;
+}
+
+if ( scalar($node_ip_range) == 0 ){
+    help_message;
+    exit 1;
+}
 
 sub get_cassandra_host_list{
     my $master_host = $_[0];
 
     $SIG{ALRM} = sub { print "CHECK MASTER NODE IS timeout $master_host\n ";my @cassandra_server_status_list = "time out error";exit 1; };
     alarm($timeout);
-    my $cmd = "/usr/local/cassandra/bin/nodetool -h $master_host ring | grep '$node_ip_range' | awk '{print \$1}'";
+    my $cmd = "/usr/local/cassandra/bin/nodetool -h $master_host ring | egrep '$node_ip_range' | awk '{print \$1}'";
     infof($cmd);
     my @host_list = qx{$cmd};
     if  ( $? != 0 ){
@@ -136,10 +156,10 @@ sub get_cf_diskspace{
             my $graph_name = "$ks_name"."_"."$cf_name"."_"."$attr";
 
             if ($gf_execute eq "on"){
-                infof(" execute post data ($host, $graph_name, $result)");
+                infof(" execute post data {host:$host,graph_name:$graph_name,value:$result}");
                 gf_post_data($host, $graph_name, $result);
             }else{
-                infof("if (-g on) will post data ($host, $graph_name, $result)");
+                infof("if (-g on) will post data {host:$host,graph_name:$graph_name,value:$result}");
             }
             
             push(@all_status,\@status);
@@ -163,10 +183,10 @@ sub ks_cflist_to_graph{
     eval{
         foreach my $cf_name ( keys( %all_list_hash ) ) {
             my $ks_name = $all_list_hash{$cf_name};
-            infof("$ks_name =~ $regexp_word");
+            debugf("$ks_name =~ $regexp_word");
             if ($ks_name =~ "$regexp_word"){
                 my @host_status = get_cf_diskspace($host,$cf_name,$ks_name);
-                sleep 1;
+                select(undef, undef, undef, 0.1);
             }
         }
     };if($@){
