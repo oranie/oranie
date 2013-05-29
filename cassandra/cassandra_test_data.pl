@@ -18,7 +18,7 @@ my $method;
 my $ks = "Keyspace1";
 #column family
 my $cf = "test_table";
-#base key
+#base key name text
 my $key_name;
 
 GetOptions(
@@ -65,14 +65,13 @@ sub print_cassandra_data{
 
     my %hash = %$hash_r;
     if(%hash){
-        print "key = $key_name ";
+        print "GET OK!! key = $key_name ";
         foreach my $key ( keys( %hash ) ) {
             print "column { $key : $hash{$key} }";
         }
         print ";\n" ;
     }else{
-        print "key = $key_name : NO DATA ";
-        print ";\n" ;
+        print "NG!!! key = $key_name : NO DATA ;\n";
         die;
     }
 }
@@ -89,7 +88,7 @@ sub put_cassandra_data{
 
     my $columnFamily = "$cf";
     eval{
-        $c->put($columnFamily, $key_name, {title => 'megaten',kansou => 'omoshiroi'});
+        $c->put($columnFamily, $key_name, {key_name => "$key_name",title => 'megaten',kansou => 'omoshiroi'});
         infof("$columnFamily, $key_name");
     };if($@){
         die critf("put NG!! $columnFamily, $key_name,");        
@@ -119,7 +118,11 @@ eval{
             my $test_key_name = make_test_key_name($key_name,$i);
             put_cassandra_data($host,$ks,$cf,$test_key_name);
         }
+    }else{
+        critf("$method is option error");
+        die;
     }
+
 };if($@){
     critf("$host status NG!!!!!!");
     critf("$@");
@@ -129,6 +132,12 @@ infof("$host status OK!!");
 exit 0;
 
 =begin 
+time perl ./cassandra_test_data.pl -h 127.0.0.1 -k megaten -n 1000000 -m get
+
+
+
+           Cassandra::Lite memo
+
            # Insert it.
            $c->put($columnFamily, $key, {title => 'testing title', body => '...'});
 
