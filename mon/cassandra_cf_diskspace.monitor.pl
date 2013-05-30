@@ -45,7 +45,7 @@ GetOptions(
     "g=s" => \$gf_execute,
     "h=s{1}" => \$master_host,
     "r=s" => \$regexp_word,
-    "i=s{1}" => \$node_ip_range
+    "i=s{1}" => \$node_ip_range,
     "m=s" => \$mbean,
     "a=s" => \$attr
 ) or die(help_message);
