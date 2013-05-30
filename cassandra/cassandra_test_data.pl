@@ -1,4 +1,27 @@
 #!/usr/bin/perl
+=begin 
+cassandraに対してシーケンシャルにkeyを生成してputかgetをします。
+keyspaceとcolumn familyはスクリプト内に書いているので、必要に応じて変更して下さい
+
+-h ホストIP
+-k ベースとなるkey名
+-n 何件までやるか
+-m getかputか
+
+putする場合
+perl ./cassandra_test_data.pl -h 127.0.0.1 -k megaten -n 1000000 -m put
+この場合、megaten0というからスタートしてmegaten9999999まで順番にputします。
+columは「key_name => "$key_name",title => 'megaten',kansou => 'omoshiroi'」で
+key_nameだけ動的に生成したkeyをそのまま入れて残りは固定です
+
+getする場合
+perl ./cassandra_test_data.pl -h 127.0.0.1 -k megaten -n 1000000 -m get
+この場合は取得するkeyの生成はputと同じで順番にgetします。
+
+put/get共にエラーが出たらそこで処理を止めるようにしています。
+
+=end
+=cut
 
 use strict;
 use warnings;
