@@ -43,6 +43,9 @@ my $ks = "Keyspace1";
 my $cf = "test_table";
 #base key name text
 my $key_name;
+#read/write consistency_level
+#my $level = "QUORUM";
+my $level = "ONE";
 
 GetOptions(
     "h=s" => \$host,
@@ -66,7 +69,9 @@ sub get_cassandra_data{
 
     my $c = Cassandra::Lite->new(
         server_name => "$host", 
-        keyspace => "$ks");
+        keyspace => "$ks",
+        consistency_level_read => "$level",
+        consistency_level_write => "$level");
 
     my $columnFamily = "$cf";
     my $hash_r;
@@ -107,12 +112,14 @@ sub put_cassandra_data{
 
     my $c = Cassandra::Lite->new(
         server_name => "$host", 
-        keyspace => "$ks");
+        keyspace => "$ks",
+        consistency_level_read => "$level",
+        consistency_level_write => "$level");
 
     my $columnFamily = "$cf";
     eval{
         $c->put($columnFamily, $key_name, {key_name => "$key_name",title => 'megaten',kansou => 'omoshiroi'});
-        infof("$columnFamily, $key_name");
+        infof("PUT OK!! $columnFamily, $key_name {key_name => \"$key_name\",title => 'megaten',kansou => 'omoshiroi'}");
     };if($@){
         die critf("put NG!! $columnFamily, $key_name,");        
     }
