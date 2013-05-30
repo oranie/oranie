@@ -7,6 +7,7 @@ keyspaceとcolumn familyはスクリプト内に書いているので、必要�
 -k ベースとなるkey名
 -n 何件までやるか
 -m getかputか
+-l consistency_levelはQUORMかONEか
 
 putする場合
 perl ./cassandra_test_data.pl -h 127.0.0.1 -k megaten -n 1000000 -m put
@@ -44,14 +45,15 @@ my $cf = "test_table";
 #base key name text
 my $key_name;
 #read/write consistency_level
-#my $level = "QUORUM";
-my $level = "ONE";
+my $level = "QUORUM";
+#my $level = "ONE";
 
 GetOptions(
     "h=s" => \$host,
     "n=i" => \$no,
     "m=s" => \$method,
     "k=s" => \$key_name,
+    "l=s" => \$level,
 );
 
 sub make_test_key_name{
@@ -65,7 +67,8 @@ sub get_cassandra_data{
     my $host = $_[0];
     my $ks = $_[1];
     my $cf = $_[2];
-    my $key_name = $_[3];
+    my $base_key_name = $_[3];
+    my $seq_no = $_[4];
 
     my $c = Cassandra::Lite->new(
         server_name => "$host", 
@@ -75,16 +78,21 @@ sub get_cassandra_data{
 
     my $columnFamily = "$cf";
     my $hash_r;
-    #infof("set data: $columnFamily, $key_name,");
+    my $test_key_name;
+    infof("set data: $columnFamily, $key_name,");
 
     eval{
-        $hash_r = $c->get($columnFamily, $key_name)
-            or die;
+        for (my $i = 0;$i < $seq_no;$i++){
+            $test_key_name = make_test_key_name($base_key_name,$i);
+            $hash_r = $c->get($columnFamily, $test_key_name)
+                or die;
+            print_cassandra_data($hash_r,$test_key_name);
+        }
     };if($@){
-        die critf("get NG!! $columnFamily, $key_name,");
+        die critf("get NG!! $columnFamily, $test_key_name,");
     }
 
-    return $hash_r;
+    return 0;
 }
 
 sub print_cassandra_data{
@@ -108,7 +116,8 @@ sub put_cassandra_data{
     my $host = $_[0];
     my $ks = $_[1];
     my $cf = $_[2];
-    my $key_name = $_[3];
+    my $base_key_name = $_[3];
+    my $seq_no = $_[4];
 
     my $c = Cassandra::Lite->new(
         server_name => "$host", 
@@ -117,37 +126,24 @@ sub put_cassandra_data{
         consistency_level_write => "$level");
 
     my $columnFamily = "$cf";
+    my $test_key_name;
     eval{
-        $c->put($columnFamily, $key_name, {key_name => "$key_name",title => 'megaten',kansou => 'omoshiroi'});
-        infof("PUT OK!! $columnFamily, $key_name {key_name => \"$key_name\",title => 'megaten',kansou => 'omoshiroi'}");
+	    for (my $i = 0;$i < $seq_no;$i++){
+            $test_key_name = make_test_key_name($base_key_name,$i);
+            $c->put($columnFamily, $test_key_name, {key_name => "$test_key_name",title => 'megaten',kansou => 'omoshiroi'});
+            infof("PUT OK!! $columnFamily, $test_key_name {key_name => \"$test_key_name\",title => 'megaten',kansou => 'omoshiroi'}");
+        }
     };if($@){
-        die critf("put NG!! $columnFamily, $key_name,");        
+        die critf("put NG!! $columnFamily, $test_key_name,");        
     }
     
 }
 
-sub print_get_data{
-    my $host = $_[0];
-    my $ks = $_[1];
-    my $cf = $_[2];
-    my $key_name = $_[3];
-    my $no = $_[4];
-
-    my $get_hash_r = get_cassandra_data($host,$ks,$cf,$key_name,$no);
-    print_cassandra_data($get_hash_r,$key_name);
-}
-
 eval{
     if($method eq "get"){
-        for (my $i = 0;$i < $no;$i++){
-            my $test_key_name = make_test_key_name($key_name,$i);
-            print_get_data($host,$ks,$cf,$test_key_name);
-        }
+        get_cassandra_data($host,$ks,$cf,$key_name,$no);
     }elsif($method eq "put"){
-        for (my $i = 0;$i < $no;$i++){
-            my $test_key_name = make_test_key_name($key_name,$i);
-            put_cassandra_data($host,$ks,$cf,$test_key_name);
-        }
+        put_cassandra_data($host,$ks,$cf,$key_name,$no);
     }else{
         critf("$method is option error");
         die;
