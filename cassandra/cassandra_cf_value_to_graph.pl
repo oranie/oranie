@@ -7,6 +7,7 @@ use Data::Dumper;
 use JSON;
 use Net::GrowthForecast;
 use Log::Minimal;
+use PID::File;
 
 local $Log::Minimal::LOG_LEVEL = "WARN";
 
@@ -22,6 +23,24 @@ GetOptions(
     "h=s{1}" => \$master_host,
     "m=s{1,}" => \@graph_item_list,
 ) ;
+
+###pid check
+
+my $pid_name = join('', @graph_item_list);
+$pid_name =~ s/ //g;
+$pid_name = $pid_name . $master_host;
+
+my $pid_file = PID::File->new;
+$pid_file->file("/tmp/${pid_name}.pid");
+
+exit if $pid_file->running;
+if ( $pid_file->create ){
+}else{
+    critf("pid is here");
+    exit 1;
+}
+
+##initialize
 
 my $nodetool = "/usr/local/cassandra/bin/nodetool";
 my @node_list = qx/$nodetool -h $master_host ring| grep datacenter1 | awk '{print \$1}'/;
@@ -134,7 +153,9 @@ eval{
         $pm->finish;
     }
     $pm->wait_all_children;
+    $pid_file->remove;
 };if($@){
     critf("cassandra cfstats POST NG!!! $@\n");
+    $pid_file->remove;
 }
 
