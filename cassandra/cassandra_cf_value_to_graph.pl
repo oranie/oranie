@@ -10,7 +10,7 @@ use Log::Minimal;
 
 local $Log::Minimal::LOG_LEVEL = "WARN";
 
-my $gf_host = "10.174.0.93";
+my $gf_host = "127.0.0.1";
 my $gf_port = "5125";
 my $gf_execute = "off";
 my $graph_service_base_name = "cassandra_cfstats_";
