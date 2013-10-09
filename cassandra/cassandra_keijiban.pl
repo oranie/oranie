@@ -8,7 +8,7 @@ use Data::Dumper;
 use Cassandra::Lite;
 use Plack::Builder;
 
-my $host = "10.174.0.68";
+my $host = "127.0.0.1";
 my $ks = "oranie";
 my $cf = "keijiban";
 my $level = "ONE";
