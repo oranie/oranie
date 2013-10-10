@@ -8,6 +8,8 @@ use Data::Dumper;
 use Cassandra::Lite;
 use Plack::Builder;
 
+local $Log::Minimal::LOG_LEVEL = "WARN";
+
 my $host = "127.0.0.1";
 my $ks = "oranie";
 my $cf = "keijiban";
@@ -21,8 +23,8 @@ post '/commit' => sub {
     my $name = $amon->req->param('name');
     my $title = $amon->req->param('title');
     my $text = $amon->req->param('text');
+    infof("POST DATA : $name $title $text");
     my $error;
-    print "$name $title $text\n";
     unless ($name && $title && $text) {
         my $error = "項目全部入れてね";
         return $amon->create_response(404, [], ["$error"]);
@@ -32,8 +34,8 @@ post '/commit' => sub {
     #$id = reset_counter();
     increment_counter();
     put_cassandra_data($id,$name,$title,$text);
+    infof("POST DATA : $name $title $text");
     return $amon->redirect('/');
-    #return $amon->create_response(200, [], ["POST OK"]);
 };
 
 get '/' => sub {
@@ -54,7 +56,7 @@ get '/' => sub {
         push(@result,$mojiretsu);
         $i++;
     }
-    return $amon->create_response(200, [], [@result]);
+    return $amon->create_response(200, ['Content-Type' => 'text/html'], [@result]);
 };
 
 
@@ -69,16 +71,13 @@ sub get_cassandra_data{
     my $hash_r;
     my @hash_r_list;
     my $counter = get_counter();
-    infof("counter is $counter");
     eval{
         for (my $id = 0;$id <= $counter;$id++){
             $hash_r = $c->get($columnFamily, $id)
                 or die;
             push(@hash_r_list,$hash_r);
-            print Dumper($hash_r);
         }
     };if($@){
-        #die critf("Dumper($@) get NG!! $columnFamily, $test_key_name,");
         print Dumer($@);
         print Dumper(@hash_r_list);
         die @hash_r_list;
@@ -106,12 +105,6 @@ sub put_cassandra_data{
 }
 
 sub get_counter{
-    my $c = Cassandra::Lite->new(
-        server_name => "$host",
-        keyspace => "$ks",
-        consistency_level_read => "$level",
-        consistency_level_write => "$level");
-
     my $cf_counter = "counter";
     my $counter_key = "0";
     my $count;
@@ -130,12 +123,6 @@ sub get_counter{
 }
 
 sub increment_counter{
-    my $c = Cassandra::Lite->new(
-        server_name => "$host",
-        keyspace => "$ks",
-        consistency_level_read => "$level",
-        consistency_level_write => "$level");
-
     my $now_count = get_counter();
     my $inc_count = $now_count;
     $inc_count++;
@@ -151,16 +138,11 @@ sub increment_counter{
 }
 
 sub reset_counter{
-    my $c = Cassandra::Lite->new(
-        server_name => "$host",
-        keyspace => "$ks",
-        consistency_level_read => "$level",
-        consistency_level_write => "$level");
-
     my $cf_counter = "counter";
     my $counter_key = "0";
     eval{
         $c->put($cf_counter, $counter_key, { id => "0"});
+        infof("counter reset ok");
     };if($@){
         print Dumper($@);
     }
@@ -169,6 +151,7 @@ sub reset_counter{
 
 sub form_html{
 my $text = <<'EOS';
+<meta charset="UTF-8">
 <form action="/commit" method="post">
 <p>
 名前：<input type="text" name="name" size="40">
