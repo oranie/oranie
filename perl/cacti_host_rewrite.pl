@@ -21,8 +21,8 @@ my $u = "root";
 my $p = "";
 
 my $base_domain = ".test.jp";
-my $regexp_base = "s13-soc-sb-";
-my $regexp_change = "sb-deka-soc-";
+my $regexp_base = "s13-test-sb-";
+my $regexp_change = "sb-test-soc-";
 
 my $master_description = "";
 my $master_hostname = "";
