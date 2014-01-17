@@ -77,27 +77,32 @@ sub gf_post_data{
     eval{
         my $gf = Net::GrowthForecast->new( host => $gf_host , port => $gf_port );
 
-        $gf->post( "$graph_service_name", "$graph_host_name", "$graph_name", $post_value, %graph_mode );
+        $gf->post( "$graph_service_name", "$graph_host_name", "$graph_name", $post_value, %graph_mode ) or die;
         infof("POST OK :$graph_service_name $graph_host_name $graph_name $post_value");
     };if($@){
+        infof("POST NG!!! :$graph_service_name $graph_host_name $graph_name $post_value");
         critf("$@");
-        return 1;
+        die;
     }
     return 0;
 }
 
+eval{
+    my $jmx_value = get_jmx_value($host,$jolokia_port,$mbean,$attr,$check_value);
+    infof("result is $jmx_value");
 
-my $jmx_value = get_jmx_value($host,$jolokia_port,$mbean,$attr,$check_value);
-infof("result is $jmx_value");
-
-my %jmx_hash = %$jmx_value;
-foreach my $key(keys(%jmx_hash)){
-    my $jmx_value_ref = $jmx_hash{$key};
-    my %jmx_value_hash = %$jmx_value_ref;
-    infof("$key : $check_value : $jmx_value_hash{$check_value}");
-    if ($graph_exe eq "on"){
-        infof("graph execute!!");
-        gf_post_data($gf_host,$gf_port,$graph_service_name,$host,$check_value,$jmx_value_hash{$check_value});
+    my %jmx_hash = %$jmx_value;
+    foreach my $key(keys(%jmx_hash)){
+        my $jmx_value_ref = $jmx_hash{$key};
+        my %jmx_value_hash = %$jmx_value_ref;
+        infof("$key : $check_value : $jmx_value_hash{$check_value}");
+        if ($graph_exe eq "on"){
+            infof("graph execute!!");
+            gf_post_data($gf_host,$gf_port,$graph_service_name,$host,$check_value,$jmx_value_hash{$check_value});
+        }
     }
+};if($@){
+    critf("$@");
+    exit 1;
 }
 
