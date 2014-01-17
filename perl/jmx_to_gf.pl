@@ -9,10 +9,11 @@ use JMX::Jmx4Perl::Alias;
 use JSON ;
 use Data::Dumper;
 use Log::Minimal;
+use Net::GrowthForecast;
 
 my $timeout = 3;
 my ($host,$mbean,$attr,$check_value,$jolokia_port);
-my ($gf_host,$gf_port,$graph_exe);
+my ($gf_host,$gf_port,$graph_exe,$graph_service_name);
 my %graph_mode = ("mode" => "count");
 
 GetOptions(
@@ -21,10 +22,13 @@ GetOptions(
     "c=s" => \$check_value,
     "port=s" => \$jolokia_port,
     "host=s" => \$host,
-    "gf_host=s" => \$gf_host,
-    "gf_port=s" => \$gf_port,
-    "graph=s" => \$graph_exe,
+    "gh=s" => \$gf_host,
+    "gp=s" => \$gf_port,
+    "graph_service_name=s" => \$graph_service_name,
+    "exe=s" => \$graph_exe,
 );
+
+infof("$gf_host,$gf_port,$graph_exe");
 
 sub print_help{
     print "Option does not exist\n";
@@ -91,5 +95,9 @@ foreach my $key(keys(%jmx_hash)){
     my $jmx_value_ref = $jmx_hash{$key};
     my %jmx_value_hash = %$jmx_value_ref;
     infof("$key : $check_value : $jmx_value_hash{$check_value}");
+    if ($graph_exe eq "on"){
+        infof("graph execute!!");
+        gf_post_data($gf_host,$gf_port,$graph_service_name,$host,$check_value,$jmx_value_hash{$check_value});
+    }
 }
 
