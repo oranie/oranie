@@ -23,5 +23,3 @@ do
         exit
     fi
 done
-
-#test1
