@@ -1,3 +1,5 @@
+//  https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/transaction-example.html
+
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
